@@ -111,6 +111,12 @@ class QueueMonitor
 
         $model = self::getModel();
 
+        $payload = $job->getRawBody();
+
+        while(is_array($payload)){
+            $payload = json_encode($payload);
+        }
+
         $model::query()->create([
             'job_id' => self::getJobId($job),
             'name' => $job->resolveName(),
@@ -118,6 +124,7 @@ class QueueMonitor
             'started_at' => $now,
             'started_at_exact' => $now->format(self::TIMESTAMP_EXACT_FORMAT),
             'attempt' => $job->attempts(),
+            'payload' => is_string($payload) ? $payload : null,
         ]);
     }
 

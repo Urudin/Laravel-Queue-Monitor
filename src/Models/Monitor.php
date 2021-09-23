@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use romanzipp\QueueMonitor\Models\Contracts\MonitorContract;
 use Throwable;
 
@@ -20,6 +21,7 @@ use Throwable;
  * @property string|null $started_at_exact
  * @property \Illuminate\Support\Carbon|null $finished_at
  * @property string|null $finished_at_exact
+ * @property string|null $payload
  * @property float $time_elapsed
  * @property bool $failed
  * @property int $attempt
@@ -105,6 +107,19 @@ class Monitor extends Model implements MonitorContract
      * Methods
      *--------------------------------------------------------------------------
      */
+
+    public function retry(){
+        $unix_now = Carbon::now()->unix();
+
+        DB::table('jobs')->insert([
+            'queue' => $this->queue,
+            'payload' => $this->payload,
+            'attempts' => 0,
+            'available_at' => $unix_now,
+            'created_at' => $unix_now,
+        ]);
+    }
+
 
     public function getStartedAtExact(): ?Carbon
     {

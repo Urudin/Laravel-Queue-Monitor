@@ -24,6 +24,10 @@ class QueueMonitorRoutes
             if (config('queue-monitor.ui.allow_purge')) {
                 $this->delete('purge', '\romanzipp\QueueMonitor\Controllers\PurgeMonitorsController')->name('queue-monitor::purge');
             }
+
+            if (config('queue-monitor.ui.allow_retry')) {
+                $this->get('retry/{job_id}', '\romanzipp\QueueMonitor\Controllers\RetryJobsController')->name('queue-monitor::retry');
+            }
         };
     }
 }

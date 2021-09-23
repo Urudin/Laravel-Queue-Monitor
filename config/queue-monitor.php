@@ -45,6 +45,12 @@ return [
          */
         'allow_purge' => true,
 
+        /**
+         * Allow retries
+         */
+        'allow_retry' => true,
+
+
         'show_metrics' => true,
 
         /**

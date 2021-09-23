@@ -43,7 +43,19 @@
         <form action="" method="get">
 
             <div class="flex items-center my-2 -mx-2">
-
+                <div class="px-2 w-1/4">
+                    <label for="filter_show" class="block mb-1 text-xs uppercase font-semibold text-gray-600">
+                        JOB Names
+                    </label>
+                    <select name="jobName" id="filter_show" class="w-full p-2 bg-gray-200 border-2 border-gray-300 rounded">
+                        <option value="all">All</option>
+                        @foreach($jobNames as $jobName)
+                            <option @if($filters['jobName'] === $jobName) selected @endif value="{{ $jobName }}">
+                                {{ $jobName }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
                 <div class="px-2 w-1/4">
                     <label for="filter_show" class="block mb-1 text-xs uppercase font-semibold text-gray-600">
                         Show jobs
@@ -222,7 +234,7 @@
 
                         @if(config('queue-monitor.ui.allow_deletion'))
 
-                            <td class="p-4 text-gray-800 text-sm leading-5 border-b border-gray-200">
+                            <td class="pt-4 pb-4 pr-0 pl-4 text-gray-800 text-sm leading-5 border-b border-gray-200">
 
                                 <form action="{{ route('queue-monitor::destroy', [$job]) }}" method="post">
 
@@ -234,6 +246,25 @@
                                     </button>
 
                                 </form>
+
+                            </td>
+
+                        @endif
+
+                        @if(config('queue-monitor.ui.allow_retry'))
+
+                            <td class="pt-4 pb-4 pr-4 pl-0 text-gray-800 text-sm leading-5 border-b border-gray-200">
+                                @if($job->hasFailed())
+                                    <form action="{{ route('queue-monitor::retry', [$job]) }}" method="get">
+
+                                        @csrf
+
+                                        <button class="px-3 py-1 bg-green-200 hover:bg-green-300 text-green-800 text-xs font-medium uppercase tracking-wider text-white rounded">
+                                            Retry
+                                        </button>
+
+                                    </form>
+                                @endif
 
                             </td>
 

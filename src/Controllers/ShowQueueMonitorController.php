@@ -19,11 +19,13 @@ class ShowQueueMonitorController
         $data = $request->validate([
             'type' => ['nullable', 'string', Rule::in(['all', 'running', 'failed', 'succeeded'])],
             'queue' => ['nullable', 'string'],
+            'jobName' => ['nullable', 'string'],
         ]);
 
         $filters = [
             'type' => $data['type'] ?? 'all',
             'queue' => $data['queue'] ?? 'all',
+            'jobName' => $data['jobName'] ?? 'all'
         ];
 
         $jobs = QueueMonitor::getModel()
@@ -46,6 +48,9 @@ class ShowQueueMonitorController
             ->when(($queue = $filters['queue']) && 'all' !== $queue, static function (Builder $builder) use ($queue) {
                 $builder->where('queue', $queue);
             })
+            ->when(($jobName = $filters['jobName']) && 'all' !== $jobName, static function (Builder $builder) use ($jobName) {
+                $builder->where('name', $jobName);
+            })
             ->ordered()
             ->paginate(
                 config('queue-monitor.ui.per_page')
@@ -64,6 +69,12 @@ class ShowQueueMonitorController
             })
             ->toArray();
 
+        $jobNames = QueueMonitor::getModel()
+            ->newQuery()
+            ->select('name')
+            ->groupBy('name')
+            ->pluck('name');
+
         $metrics = null;
 
         if (config('queue-monitor.ui.show_metrics')) {
@@ -75,6 +86,7 @@ class ShowQueueMonitorController
             'filters' => $filters,
             'queues' => $queues,
             'metrics' => $metrics,
+            'jobNames' => $jobNames,
         ]);
     }
 
