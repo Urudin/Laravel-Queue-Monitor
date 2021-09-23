@@ -116,8 +116,12 @@
                     <th class="px-4 py-3 font-medium text-left text-xs text-gray-600 uppercase border-b border-gray-200">Started</th>
                     <th class="px-4 py-3 font-medium text-left text-xs text-gray-600 uppercase border-b border-gray-200">Error</th>
 
-                    @if(config('queue-monitor.ui.allow_deletion'))
-                        <th class="px-4 py-3 font-medium text-left text-xs text-gray-600 uppercase border-b border-gray-200">Action</th>
+                    @if(config('queue-monitor.ui.allow_deletion') || config('queue-monitor.ui.allow_retry'))
+                        @if(config('queue-monitor.ui.allow_deletion') && config('queue-monitor.ui.allow_retry'))
+                            <th colspan="2" class="px-4 py-3 font-medium text-left text-xs text-gray-600 uppercase border-b border-gray-200">Action</th>
+                        @else
+                            <th class="px-4 py-3 font-medium text-left text-xs text-gray-600 uppercase border-b border-gray-200">Action</th>
+                        @endif
                     @endif
                 </tr>
 
