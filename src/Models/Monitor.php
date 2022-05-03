@@ -5,6 +5,7 @@ namespace romanzipp\QueueMonitor\Models;
 use Carbon\CarbonInterval;
 use Exception;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Arr;
@@ -41,6 +42,8 @@ use Throwable;
  */
 class Monitor extends Model implements MonitorContract
 {
+    use HasFactory;
+
     protected $guarded = [];
 
     protected $casts = [
