@@ -296,8 +296,7 @@ class Monitor extends Model implements MonitorContract
         return ! $this->hasFailed();
     }
 
-    public function job(): BelongsTo
-    {
+    public function job(): BelongsTo {
         return $this->belongsTo(Job::class);
     }
 }
