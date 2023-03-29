@@ -43,7 +43,6 @@ return [
         // Allow retrying failed monitor entries.
         'allow_retry' => true,
 
-
         'show_metrics' => true,
 
         // Time frame used to calculate metrics values (in days).

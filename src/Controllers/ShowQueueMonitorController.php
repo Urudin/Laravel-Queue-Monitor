@@ -32,7 +32,7 @@ class ShowQueueMonitorController
             'status' => isset($data['status']) ? (int) $data['status'] : null,
             'queue' => $data['queue'] ?? 'all',
             'name' => $data['name'] ?? null,
-            'jobName' => $data['jobName'] ?? 'all'
+            'jobName' => $data['jobName'] ?? 'all',
         ];
 
         $jobsQuery = QueueMonitor::getModel()->newQuery();

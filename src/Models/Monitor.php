@@ -10,8 +10,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
-use romanzipp\QueueMonitor\Enums\MonitorStatus;
 use Illuminate\Support\Facades\DB;
+use romanzipp\QueueMonitor\Enums\MonitorStatus;
 use romanzipp\QueueMonitor\Models\Contracts\MonitorContract;
 
 /**
@@ -121,7 +121,8 @@ class Monitor extends Model implements MonitorContract
      *--------------------------------------------------------------------------
      */
 
-    public function retry(){
+    public function retry()
+    {
         $unix_now = Carbon::now()->unix();
 
         DB::table('jobs')->insert([
@@ -132,7 +133,6 @@ class Monitor extends Model implements MonitorContract
             'created_at' => $unix_now,
         ]);
     }
-
 
     public function getStartedAtExact(): ?Carbon
     {
@@ -296,7 +296,8 @@ class Monitor extends Model implements MonitorContract
         return ! $this->hasFailed();
     }
 
-    public function job(): BelongsTo {
+    public function job(): BelongsTo
+    {
         return $this->belongsTo(Job::class);
     }
 }
