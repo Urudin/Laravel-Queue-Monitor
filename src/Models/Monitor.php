@@ -10,12 +10,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
+use romanzipp\QueueMonitor\Enums\MonitorStatus;
 use Illuminate\Support\Facades\DB;
 use romanzipp\QueueMonitor\Models\Contracts\MonitorContract;
-use Throwable;
 
 /**
- * @property int id
+ * @property int $id
  * @property string $job_id
  * @property string|null $name
  * @property string|null $queue
@@ -24,8 +24,7 @@ use Throwable;
  * @property \Illuminate\Support\Carbon|null $finished_at
  * @property string|null $finished_at_exact
  * @property string|null $payload
- * @property float $time_elapsed
- * @property bool $failed
+ * @property int $status
  * @property int $attempt
  * @property int|null $progress
  * @property string|null $exception
@@ -46,17 +45,23 @@ class Monitor extends Model implements MonitorContract
 
     protected $guarded = [];
 
+    /**
+     * @var array<string, string>
+     */
     protected $casts = [
         'failed' => 'bool',
+        'started_at' => 'datetime',
+        'finished_at' => 'datetime',
     ];
 
-    protected $dates = [
-        'started_at',
-        'finished_at',
-    ];
-
+    /**
+     * @var bool
+     */
     public $timestamps = false;
 
+    /**
+     * @param array<string, mixed> $attributes
+     */
     public function __construct(array $attributes = [])
     {
         parent::__construct($attributes);
@@ -74,36 +79,40 @@ class Monitor extends Model implements MonitorContract
      *--------------------------------------------------------------------------
      */
 
-    public function scopeWhereJob(Builder $query, $jobId)
+    /**
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param string|int $jobId
+     */
+    public function scopeWhereJob(Builder $query, $jobId): void
     {
-        return $query->where('job_id', $jobId);
+        $query->where('job_id', $jobId);
     }
 
-    public function scopeOrdered(Builder $query)
+    public function scopeOrdered(Builder $query): void
     {
-        return $query
+        $query
             ->orderBy('started_at', 'desc')
             ->orderBy('started_at_exact', 'desc');
     }
 
-    public function scopeLastHour(Builder $query)
+    public function scopeLastHour(Builder $query): void
     {
-        return $query->where('started_at', '>', Carbon::now()->subHours(1));
+        $query->where('started_at', '>', Carbon::now()->subHours(1));
     }
 
-    public function scopeToday(Builder $query)
+    public function scopeToday(Builder $query): void
     {
-        return $query->whereRaw('DATE(started_at) = ?', [Carbon::now()->subHours(1)->format('Y-m-d')]);
+        $query->whereRaw('DATE(started_at) = ?', [Carbon::now()->subHours(1)->format('Y-m-d')]);
     }
 
-    public function scopeFailed(Builder $query)
+    public function scopeFailed(Builder $query): void
     {
-        return $query->where('failed', true);
+        $query->where('failed', MonitorStatus::FAILED);
     }
 
-    public function scopeSucceeded(Builder $query)
+    public function scopeSucceeded(Builder $query): void
     {
-        return $query->where('failed', false);
+        $query->where('status', MonitorStatus::SUCCEEDED);
     }
 
     /*
@@ -204,7 +213,7 @@ class Monitor extends Model implements MonitorContract
     /**
      * Get any optional data that has been added to the monitor model within the job.
      *
-     * @return array
+     * @return array<string, mixed>
      */
     public function getData(): array
     {
@@ -218,7 +227,7 @@ class Monitor extends Model implements MonitorContract
      *
      * @return \Throwable|null
      */
-    public function getException(bool $rescue = true): ?Throwable
+    public function getException(bool $rescue = true): ?\Throwable
     {
         if (null === $this->exception_class) {
             return null;
@@ -230,7 +239,7 @@ class Monitor extends Model implements MonitorContract
 
         try {
             return new $this->exception_class($this->exception_message);
-        } catch (Exception $exception) {
+        } catch (\Exception $exception) {
             return null;
         }
     }
@@ -270,7 +279,7 @@ class Monitor extends Model implements MonitorContract
      */
     public function hasFailed(): bool
     {
-        return true === $this->failed;
+        return MonitorStatus::FAILED === $this->status;
     }
 
     /**

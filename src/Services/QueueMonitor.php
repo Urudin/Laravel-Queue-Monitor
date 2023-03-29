@@ -8,17 +8,15 @@ use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\Carbon;
+use romanzipp\QueueMonitor\Enums\MonitorStatus;
 use romanzipp\QueueMonitor\Models\Contracts\MonitorContract;
 use romanzipp\QueueMonitor\Traits\IsMonitored;
-use Throwable;
 
 class QueueMonitor
 {
     private const TIMESTAMP_EXACT_FORMAT = 'Y-m-d H:i:s.u';
 
-    public static $loadMigrations = false;
-
-    public static $model;
+    public static string $model;
 
     /**
      * Get the model used to store the monitoring data.
@@ -33,7 +31,7 @@ class QueueMonitor
     /**
      * Handle Job Processing.
      *
-     * @param JobProcessing $event
+     * @param \Illuminate\Queue\Events\JobProcessing $event
      *
      * @return void
      */
@@ -45,47 +43,47 @@ class QueueMonitor
     /**
      * Handle Job Processed.
      *
-     * @param JobProcessed $event
+     * @param \Illuminate\Queue\Events\JobProcessed $event
      *
      * @return void
      */
     public static function handleJobProcessed(JobProcessed $event): void
     {
-        self::jobFinished($event->job);
+        self::jobFinished($event->job, MonitorStatus::SUCCEEDED);
     }
 
     /**
      * Handle Job Failing.
      *
-     * @param JobFailed $event
+     * @param \Illuminate\Queue\Events\JobFailed $event
      *
      * @return void
      */
     public static function handleJobFailed(JobFailed $event): void
     {
-        self::jobFinished($event->job, true, $event->exception);
+        self::jobFinished($event->job, MonitorStatus::FAILED, $event->exception);
     }
 
     /**
      * Handle Job Exception Occurred.
      *
-     * @param JobExceptionOccurred $event
+     * @param \Illuminate\Queue\Events\JobExceptionOccurred $event
      *
      * @return void
      */
     public static function handleJobExceptionOccurred(JobExceptionOccurred $event): void
     {
-        self::jobFinished($event->job, true, $event->exception);
+        self::jobFinished($event->job, MonitorStatus::FAILED, $event->exception);
     }
 
     /**
      * Get Job ID.
      *
-     * @param JobContract $job
+     * @param \Illuminate\Contracts\Queue\Job $job
      *
      * @return string|int
      */
-    public static function getJobId(JobContract $job)
+    public static function getJobId(JobContract $job): string|int
     {
         if ($jobId = $job->getJobId()) {
             return $jobId;
@@ -97,7 +95,7 @@ class QueueMonitor
     /**
      * Start Queue Monitoring for Job.
      *
-     * @param JobContract $job
+     * @param \Illuminate\Contracts\Queue\Job $job
      *
      * @return void
      */
@@ -111,33 +109,49 @@ class QueueMonitor
 
         $model = self::getModel();
 
-        $payload = $job->getRawBody();
+        /** @var \romanzipp\QueueMonitor\Models\Contracts\MonitorContract $monitor */
+        $monitor = $payload = $job->getRawBody();
 
         while(is_array($payload)){
             $payload = json_encode($payload);
         }
 
         $model::query()->create([
-            'job_id' => self::getJobId($job),
+            'job_id' => $jobId = self::getJobId($job),
             'name' => $job->resolveName(),
             'queue' => $job->getQueue(),
             'started_at' => $now,
             'started_at_exact' => $now->format(self::TIMESTAMP_EXACT_FORMAT),
             'attempt' => $job->attempts(),
+            'status' => MonitorStatus::RUNNING,
             'payload' => is_string($payload) ? $payload : null,
         ]);
+
+        // Mark jobs with same job id (different execution) as stale
+        $model::query()
+            ->where('id', '!=', $monitor->id)
+            ->where('job_id', $jobId)
+            ->where('status', '!=', MonitorStatus::FAILED)
+            ->whereNull('finished_at')
+            ->each(function (MonitorContract $monitor) {
+                $monitor->update([
+                    'finished_at' => $now = Carbon::now(),
+                    'finished_at_exact' => $now->format(self::TIMESTAMP_EXACT_FORMAT),
+                    'status' => MonitorStatus::STALE,
+                ]);
+            });
     }
 
     /**
      * Finish Queue Monitoring for Job.
      *
-     * @param JobContract $job
-     * @param bool $failed
-     * @param Throwable|null $exception
+     * @param \Illuminate\Contracts\Queue\Job $job
+     * @param int $status
+     * @param \Throwable|null $exception
      *
      * @return void
      */
-    protected static function jobFinished(JobContract $job, bool $failed = false, ?Throwable $exception = null): void
+    protected static function jobFinished(JobContract $job, int $status, ?\Throwable $exception = null): void
     {
         if ( ! self::shouldBeMonitored($job)) {
             return;
@@ -145,6 +159,7 @@ class QueueMonitor
 
         $model = self::getModel();
 
+        /** @var \romanzipp\QueueMonitor\Models\Contracts\MonitorContract|null $monitor */
         $monitor = $model::query()
             ->where('job_id', self::getJobId($job))
             ->where('attempt', $job->attempts())
@@ -155,14 +170,8 @@ class QueueMonitor
             return;
         }
 
-        /** @var MonitorContract $monitor */
         $now = Carbon::now();
 
-        if ($startedAt = $monitor->getStartedAtExact()) {
-            $timeElapsed = (float) $startedAt->diffInSeconds($now) + $startedAt->diff($now)->f;
-        }
-
-        /** @var IsMonitored $resolvedJob */
         $resolvedJob = $job->resolveName();
 
         if (null === $exception && false === $resolvedJob::keepMonitorOnSuccess()) {
@@ -174,8 +183,7 @@ class QueueMonitor
         $attributes = [
             'finished_at' => $now,
             'finished_at_exact' => $now->format(self::TIMESTAMP_EXACT_FORMAT),
-            'time_elapsed' => $timeElapsed ?? 0.0,
-            'failed' => $failed,
+            'status' => $status,
         ];
 
         if (null !== $exception) {
@@ -192,7 +200,7 @@ class QueueMonitor
     /**
      * Determine weather the Job should be monitored, default true.
      *
-     * @param JobContract $job
+     * @param \Illuminate\Contracts\Queue\Job $job
      *
      * @return bool
      */

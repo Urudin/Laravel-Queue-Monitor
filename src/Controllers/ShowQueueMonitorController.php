@@ -3,58 +3,62 @@
 namespace romanzipp\QueueMonitor\Controllers;
 
 use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use romanzipp\QueueMonitor\Controllers\Payloads\Metric;
 use romanzipp\QueueMonitor\Controllers\Payloads\Metrics;
+use romanzipp\QueueMonitor\Enums\MonitorStatus;
 use romanzipp\QueueMonitor\Models\Contracts\MonitorContract;
 use romanzipp\QueueMonitor\Services\QueueMonitor;
 
 class ShowQueueMonitorController
 {
+    /**
+     * @param \Illuminate\Http\Request $request
+     *
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View
+     */
     public function __invoke(Request $request)
     {
         $data = $request->validate([
-            'type' => ['nullable', 'string', Rule::in(['all', 'running', 'failed', 'succeeded'])],
+            'status' => ['nullable', 'numeric', Rule::in(MonitorStatus::toArray())],
             'queue' => ['nullable', 'string'],
+            'name' => ['nullable', 'string'],
             'jobName' => ['nullable', 'string'],
         ]);
 
         $filters = [
-            'type' => $data['type'] ?? 'all',
+            'status' => isset($data['status']) ? (int) $data['status'] : null,
             'queue' => $data['queue'] ?? 'all',
+            'name' => $data['name'] ?? null,
             'jobName' => $data['jobName'] ?? 'all'
         ];
 
-        $jobs = QueueMonitor::getModel()
-            ->newQuery()
-            ->when(($type = $filters['type']) && 'all' !== $type, static function (Builder $builder) use ($type) {
-                switch ($type) {
-                    case 'running':
-                        $builder->whereNull('finished_at');
-                        break;
+        $jobsQuery = QueueMonitor::getModel()->newQuery();
 
-                    case 'failed':
-                        $builder->where('failed', 1)->whereNotNull('finished_at');
-                        break;
+        if (null !== $filters['status']) {
+            $jobsQuery->where('status', $data['status']);
+        }
 
-                    case 'succeeded':
-                        $builder->where('failed', 0)->whereNotNull('finished_at');
-                        break;
-                }
-            })
-            ->when(($queue = $filters['queue']) && 'all' !== $queue, static function (Builder $builder) use ($queue) {
-                $builder->where('queue', $queue);
-            })
-            ->when(($jobName = $filters['jobName']) && 'all' !== $jobName, static function (Builder $builder) use ($jobName) {
-                $builder->where('name', $jobName);
-            })
-            ->ordered()
-            ->paginate(
-                config('queue-monitor.ui.per_page')
-            )
+        if ('all' !== $filters['queue']) {
+            $jobsQuery->where('queue', $filters);
+        }
+
+        if (null !== $filters['jobName'] && 'all' !== $filters['jobName']) {
+            $jobsQuery->where('name', 'like', "%{$filters['jobName']}%");
+        }
+
+        if (null !== $filters['name']) {
+            $jobsQuery->where('name', 'like', "%{$filters['name']}%");
+        }
+
+        $jobsQuery
+            ->orderBy('started_at', 'desc')
+            ->orderBy('started_at_exact', 'desc');
+
+        $jobs = $jobsQuery
+            ->paginate(config('queue-monitor.ui.per_page'))
             ->appends(
                 $request->all()
             );
@@ -86,6 +90,7 @@ class ShowQueueMonitorController
             'filters' => $filters,
             'queues' => $queues,
             'metrics' => $metrics,
+            'statuses' => MonitorStatus::toNamedArray(),
             'jobNames' => $jobNames,
         ]);
     }
@@ -98,19 +103,21 @@ class ShowQueueMonitorController
 
         $aggregationColumns = [
             DB::raw('COUNT(*) as count'),
-            DB::raw('SUM(time_elapsed) as total_time_elapsed'),
-            DB::raw('AVG(time_elapsed) as average_time_elapsed'),
+            DB::raw('SUM(TIMESTAMPDIFF(SECOND, `started_at`, `finished_at`)) as `total_time_elapsed`'),
+            DB::raw('AVG(TIMESTAMPDIFF(SECOND, `started_at`, `finished_at`)) as `average_time_elapsed`'),
         ];
 
         $aggregatedInfo = QueueMonitor::getModel()
             ->newQuery()
             ->select($aggregationColumns)
+            ->where('status', '!=', MonitorStatus::RUNNING)
             ->where('started_at', '>=', Carbon::now()->subDays($timeFrame))
             ->first();
 
         $aggregatedComparisonInfo = QueueMonitor::getModel()
             ->newQuery()
             ->select($aggregationColumns)
+            ->where('status', '!=', MonitorStatus::RUNNING)
             ->where('started_at', '>=', Carbon::now()->subDays($timeFrame * 2))
             ->where('started_at', '<=', Carbon::now()->subDays($timeFrame))
             ->first();

@@ -35,9 +35,9 @@ class ClassUses
      *
      * @param object|string $class
      *
-     * @return array
+     * @return string[]
      */
-    public static function classUsesRecursive($class)
+    public static function classUsesRecursive(object|string $class): array
     {
         if (is_object($class)) {
             $class = get_class($class);
@@ -57,9 +57,9 @@ class ClassUses
      *
      * @param string $trait
      *
-     * @return array
+     * @return string[]
      */
-    public static function traitUsesRecursive($trait)
+    public static function traitUsesRecursive(string $trait): array
     {
         $traits = class_uses($trait);
 
