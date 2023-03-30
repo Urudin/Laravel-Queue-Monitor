@@ -46,7 +46,7 @@ class ShowQueueMonitorController
         }
 
         if (null !== $filters['jobName'] && 'all' !== $filters['jobName']) {
-            $jobsQuery->where('name', 'like', "%{$filters['jobName']}%");
+            $jobsQuery->where('name', '=', "{$filters['jobName']}");
         }
 
         if (null !== $filters['name']) {

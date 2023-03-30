@@ -110,13 +110,14 @@ class QueueMonitor
         $model = self::getModel();
 
         /** @var \romanzipp\QueueMonitor\Models\Contracts\MonitorContract $monitor */
-        $monitor = $payload = $job->getRawBody();
+        $payload = $job->getRawBody();
+
 
         while (is_array($payload)) {
             $payload = json_encode($payload);
         }
 
-        $model::query()->create([
+        $monitor = $model::query()->create([
             'job_id' => $jobId = self::getJobId($job),
             'name' => $job->resolveName(),
             'queue' => $job->getQueue(),

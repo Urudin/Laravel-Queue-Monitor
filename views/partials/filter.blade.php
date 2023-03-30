@@ -5,10 +5,10 @@
         <div class="flex items-center my-2 -mx-2">
 
             <div class="px-2 w-1/4">
-                <label for="filter_show" class="block mb-1 text-xs uppercase font-semibold text-gray-600">
+                <label for="filter_show" class="block mb-1 text-xs font-light text-gray-500">
                     @lang('Job name')
                 </label>
-                <select name="jobName" id="filter_show" class="w-full p-2 bg-gray-200 border-2 border-gray-300 rounded">
+                <select name="jobName" id="filter_show" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded text-sm appearance-none">
                     <option value="all">All</option>
                     @foreach($jobNames as $jobName)
                         <option @if($filters['jobName'] === $jobName) selected @endif value="{{ $jobName }}">
