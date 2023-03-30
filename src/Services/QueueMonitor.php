@@ -112,7 +112,6 @@ class QueueMonitor
         /** @var \romanzipp\QueueMonitor\Models\Contracts\MonitorContract $monitor */
         $payload = $job->getRawBody();
 
-
         while (is_array($payload)) {
             $payload = json_encode($payload);
         }
