@@ -162,6 +162,7 @@ class QueueMonitor
             'queue' => $job->getQueue() ?: 'default',
             'status' => MonitorStatus::QUEUED,
         ], [
+            'real_job_id' => $job->id,
             'job_uuid' => $job->uuid(),
             'name' => $job->resolveName(),
             'started_at' => $now,

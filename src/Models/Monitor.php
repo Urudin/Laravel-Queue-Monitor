@@ -326,6 +326,6 @@ class Monitor extends Model implements MonitorContract
 
     public function job(): BelongsTo
     {
-        return $this->belongsTo(Job::class, 'job_uuid');
+        return $this->belongsTo(Job::class, 'real_job_id');
     }
 }
