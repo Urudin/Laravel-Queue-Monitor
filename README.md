@@ -14,16 +14,23 @@ This package offers monitoring like [Laravel Horizon](https://laravel.com/docs/h
 - Monitor job progress
 - Get an estimated time remaining for a job
 - Store additional data for a job monitoring
+- Retry jobs via the UI
 
 ## Installation
-
-✨ **See [Upgrade Guide](https://github.com/romanzipp/Laravel-Queue-Monitor/releases/tag/3.0.0) if you are updating to 3.0** ✨
 
 ```
 composer require romanzipp/laravel-queue-monitor
 ```
 
-See [romanzipp/Laravel-Queue-Monitor-Nova](https://github.com/romanzipp/Laravel-Queue-Monitor-Nova) for **Laravel Nova** resources & metrics.
+There is an additional package [romanzipp/Laravel-Queue-Monitor-Nova](https://github.com/romanzipp/Laravel-Queue-Monitor-Nova) for **Laravel Nova** resources & metrics.
+
+### Upgrading
+
+✨ **See [Upgrade Guide](https://github.com/romanzipp/Laravel-Queue-Monitor/releases/tag/5.0.0) if you are updating to 5.0** ✨
+
+- [Upgrading to 4.0 from 3.0](https://github.com/romanzipp/Laravel-Queue-Monitor/releases/tag/4.0.0)
+- [Upgrading to 3.0 from 2.0](https://github.com/romanzipp/Laravel-Queue-Monitor/releases/tag/3.0.0)
+- [Upgrading to 2.0 from 1.0](https://github.com/romanzipp/Laravel-Queue-Monitor/releases/tag/2.0.0)
 
 ## Configuration
 
@@ -222,6 +229,31 @@ In order to show custom data on UI you need to add this line under `config/queue
 ]
 ```
 
+
+### Initial data
+
+This package also allows setting initial data to set when the job is queued.
+
+```php
+use Illuminate\Contracts\Queue\ShouldQueue;
+use romanzipp\QueueMonitor\Traits\IsMonitored;
+
+class InitialDataJob implements ShouldQueue
+{
+    use IsMonitored;
+    
+    public function __construct(private $channel)
+    {
+    }
+
+    public function initialMonitorData()
+    {
+        return ['channel_id' => $this->channel];
+    }
+}
+``` 
+
+
 ### Only keep failed jobs
 
 You can override the `keepMonitorOnSuccess()` method to only store failed monitor entries of an executed job. This can be used if you only want to keep  failed monitors for jobs that are frequently executed but worth to monitor. Alternatively you can use Laravel's built in `failed_jobs` table.
@@ -288,12 +320,13 @@ Monitor::today()->failed();
 
 ## Tests
 
-Requires [**Lando**](https://lando.dev/).
+The easiest way to execute tests locally is via [**Lando**](https://lando.dev/). The [Lando config file](.lando.yml) automatically spins up app & database containers.
 
 ```shell
 lando start
 
-lando phpunit
+lando phpunit-mysql
+lando phpunit-postgres
 ```
 
 ## Upgrading
@@ -308,3 +341,5 @@ The MIT License (MIT). Please see [License File](LICENSE.md) for more informatio
 ----
 
 This package was inspired by gilbitron's [laravel-queue-monitor](https://github.com/gilbitron/laravel-queue-monitor) which is not maintained anymore.
+
+[![Star History Chart](https://api.star-history.com/svg?repos=romanzipp/laravel-queue-monitor&type=Date)](https://star-history.com/#romanzipp/laravel-queue-monitor&Date)

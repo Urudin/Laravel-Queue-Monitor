@@ -6,11 +6,14 @@ use Illuminate\Queue\Events\JobExceptionOccurred;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
+use Illuminate\Queue\Events\JobQueued;
 use Illuminate\Queue\QueueManager;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use romanzipp\QueueMonitor\Console\Commands\MarkJobsAsStaleCommand;
 use romanzipp\QueueMonitor\Console\Commands\PurgeOldMonitorsCommand;
+use romanzipp\QueueMonitor\Middleware\CheckQueueMonitorUiConfig;
 use romanzipp\QueueMonitor\Models\Monitor;
 use romanzipp\QueueMonitor\Services\QueueMonitor;
 
@@ -46,11 +49,18 @@ class QueueMonitorProvider extends ServiceProvider
             'queue-monitor'
         );
 
-        if (config('queue-monitor.ui.enabled')) {
-            Route::group(config('queue-monitor.ui.route'), function () {
-                $this->loadRoutesFrom(__DIR__ . '/../../routes/queue-monitor.php');
+        Route::group($this->buildRouteGroupConfig(), function () {
+            $this->loadRoutesFrom(__DIR__ . '/../../routes/queue-monitor.php');
+        });
+
+        // listen to JobQueued event
+        if (config('queue-monitor.monitor_queued_jobs', true)) {
+            Event::listen(JobQueued::class, function (JobQueued $event) {
+                QueueMonitor::handleJobQueued($event);
             });
         }
+
+        // listen to other job events
 
         /** @var QueueManager $manager */
         $manager = app(QueueManager::class);
@@ -70,6 +80,22 @@ class QueueMonitorProvider extends ServiceProvider
         $manager->exceptionOccurred(static function (JobExceptionOccurred $event) {
             QueueMonitor::handleJobExceptionOccurred($event);
         });
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildRouteGroupConfig(): array
+    {
+        $config = config('queue-monitor.ui.route');
+
+        if ( ! isset($config['middleware'])) {
+            $config['middleware'] = [];
+        }
+
+        $config['middleware'][] = CheckQueueMonitorUiConfig::class;
+
+        return $config;
     }
 
     public function register(): void

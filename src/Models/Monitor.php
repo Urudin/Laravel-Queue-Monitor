@@ -10,15 +10,18 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use romanzipp\QueueMonitor\Enums\MonitorStatus;
 use romanzipp\QueueMonitor\Models\Contracts\MonitorContract;
 
 /**
  * @property int $id
+ * @property string $job_uuid
  * @property string $job_id
  * @property string|null $name
  * @property string|null $queue
+ * @property \Illuminate\Support\Carbon|null $queued_at
  * @property \Illuminate\Support\Carbon|null $started_at
  * @property string|null $started_at_exact
  * @property \Illuminate\Support\Carbon|null $finished_at
@@ -31,6 +34,7 @@ use romanzipp\QueueMonitor\Models\Contracts\MonitorContract;
  * @property string|null $exception_class
  * @property string|null $exception_message
  * @property string|null $data
+ * @property bool $retried
  *
  * @method static Builder|Monitor whereJob()
  * @method static Builder|Monitor ordered()
@@ -38,6 +42,9 @@ use romanzipp\QueueMonitor\Models\Contracts\MonitorContract;
  * @method static Builder|Monitor today()
  * @method static Builder|Monitor failed()
  * @method static Builder|Monitor succeeded()
+ *
+ * @mixin \Illuminate\Database\Eloquent\Model
+ * @mixin Builder
  */
 class Monitor extends Model implements MonitorContract
 {
@@ -50,6 +57,8 @@ class Monitor extends Model implements MonitorContract
      */
     protected $casts = [
         'failed' => 'bool',
+        'retried' => 'bool',
+        'queued_at' => 'datetime',
         'started_at' => 'datetime',
         'finished_at' => 'datetime',
     ];
@@ -80,7 +89,7 @@ class Monitor extends Model implements MonitorContract
      */
 
     /**
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param Builder $query
      * @param string|int $jobId
      */
     public function scopeWhereJob(Builder $query, $jobId): void
@@ -295,6 +304,24 @@ class Monitor extends Model implements MonitorContract
 
         return ! $this->hasFailed();
     }
+
+    public function retry(): void
+    {
+        $this->retried = true;
+        $this->save();
+
+        $response = Artisan::call('queue:retry', ['id' => $this->job_uuid]);
+
+        if (0 !== $response) {
+            throw new \Exception(Artisan::output());
+        }
+    }
+
+    public function canBeRetried(): bool
+    {
+        return ! $this->retried
+            && MonitorStatus::FAILED === $this->status
+            && null !== $this->job_uuid;
 
     public function job(): BelongsTo
     {

@@ -16,7 +16,7 @@
             <th class="px-4 py-3 font-medium text-left text-xs text-gray-600 dark:text-gray-400 uppercase border-b border-gray-200 dark:border-gray-600">@lang('Started')</th>
             <th class="px-4 py-3 font-medium text-left text-xs text-gray-600 dark:text-gray-400 uppercase border-b border-gray-200 dark:border-gray-600">@lang('Error')</th>
 
-            @if(config('queue-monitor.ui.allow_deletion'))
+            @if(config('queue-monitor.ui.allow_deletion') || config('queue-monitor.ui.allow_retry'))
                 <th class="px-4 py-3 font-medium text-left text-xs text-gray-600 dark:text-gray-400 uppercase border-b border-gray-200 dark:border-gray-600"></th>
             @endif
         </tr>
@@ -55,6 +55,11 @@
                         <span class="font-semibold">{{ $job->attempt }}</span>
                     </div>
 
+                    @if($job->retried)
+                        <div class="text-xs py-2">
+                            <span class="bg-gray-300 font-medium p-1 rounded">@lang('Retried')</span>
+                        </div>
+                    @endif
                 </td>
 
                 @if(config('queue-monitor.ui.show_custom_data'))
@@ -95,12 +100,12 @@
                 </td>
 
                 <td class="p-4 text-gray-800 dark:text-gray-300 text-sm leading-5 border-b border-gray-200 dark:border-gray-600">
-                    {{ $job->started_at->diffForHumans() }}
+                    {{ $job->started_at?->diffForHumans() }}
                 </td>
 
                 <td class="p-4 text-gray-800 dark:text-gray-300 text-sm leading-5 border-b border-gray-200 dark:border-gray-600">
 
-                    @if($job->hasFailed() && $job->exception_message !== null)
+                    @if($job->status != \romanzipp\QueueMonitor\Enums\MonitorStatus::SUCCEEDED && $job->exception_message !== null)
 
                         <textarea rows="4" class="w-64 text-xs p-1 border rounded" readonly>{{ $job->exception_message }}</textarea>
 
@@ -110,16 +115,27 @@
 
                 </td>
 
-                @if(config('queue-monitor.ui.allow_deletion'))
+                @if(config('queue-monitor.ui.allow_deletion') || config('queue-monitor.ui.allow_retry'))
 
-                    <td class="pt-4 pb-4 pr-0 pl-4 text-gray-800 text-sm leading-5 border-b border-gray-200">
-                        <form action="{{ route('queue-monitor::destroy', [$job]) }}" method="post">
-                            @csrf
-                            @method('delete')
-                            <button class="px-3 py-2 bg-transparent hover:bg-red-100 dark:hover:bg-red-800 text-red-800 dark:text-red-500 dark:hover:text-red-200 text-xs font-medium rounded transition-colors duration-150">
-                                @lang('Delete')
-                            </button>
-                        </form>
+                    <td class="p-4 eading-5 border-b border-gray-200 dark:border-gray-600">
+                        @if(config('queue-monitor.ui.allow_retry') && $job->canBeRetried())
+                            <form action="{{ route('queue-monitor::retry', [$job]) }}" method="post">
+                                @csrf
+                                @method('patch')
+                                <button class="px-3 py-2 bg-blue-200 dark:hover:bg-blue-200  text-xs font-medium rounded transition-colors duration-150">
+                                    @lang('Retry')
+                                </button>
+                            </form>
+                        @endif
+                        @if(config('queue-monitor.ui.allow_deletion'))
+                            <form action="{{ route('queue-monitor::destroy', [$job]) }}" method="post">
+                                @csrf
+                                @method('delete')
+                                <button class="px-3 py-2 bg-transparent hover:bg-red-100 dark:hover:bg-red-800 text-red-800 dark:text-red-500 dark:hover:text-red-200 text-xs font-medium rounded transition-colors duration-150">
+                                    @lang('Delete')
+                                </button>
+                            </form>
+                        @endif
                     </td>
 
                 @endif
@@ -173,7 +189,7 @@
                             <span class="font-medium">{{ $jobs->firstItem() }}</span> @lang('to')
                             <span class="font-medium">{{ $jobs->lastItem() }}</span> @lang('of')
                         @endif
-                        <span class="font-medium">{{ $jobs->total() }}</span> @lang('results')
+                        <span class="font-medium">{{ $jobs->total() }}</span> @choice('result|results', $jobs->total())
                     </div>
 
                     <div>

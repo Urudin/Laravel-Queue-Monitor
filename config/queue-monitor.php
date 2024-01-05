@@ -11,7 +11,10 @@ return [
      *   romanzipp\QueueMonitor\Models\Contracts\MonitorContract
      * interface or extend the base model.
      */
-    'model' => \romanzipp\QueueMonitor\Models\Monitor::class,
+    'model' => romanzipp\QueueMonitor\Models\Monitor::class,
+
+    // Determined if the queued jobs should be monitored
+    'monitor_queued_jobs' => true,
 
     // Specify the max character length to use for storing exception backtraces.
     'db_max_length_exception' => 4294967295,
@@ -36,6 +39,9 @@ return [
 
         // Allow the deletion of single monitor items.
         'allow_deletion' => true,
+
+        // Allow retry for a single failed monitor item.
+        'allow_retry' => true,
 
         // Allow purging all monitor entries.
         'allow_purge' => true,
