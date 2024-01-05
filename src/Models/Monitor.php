@@ -130,18 +130,18 @@ class Monitor extends Model implements MonitorContract
      *--------------------------------------------------------------------------
      */
 
-//    public function retry()
-//    {
-//        $unix_now = Carbon::now()->unix();
-//
-//        DB::table('jobs')->insert([
-//            'queue' => $this->queue,
-//            'payload' => $this->payload,
-//            'attempts' => 0,
-//            'available_at' => $unix_now,
-//            'created_at' => $unix_now,
-//        ]);
-//    }
+    //    public function retry()
+    //    {
+    //        $unix_now = Carbon::now()->unix();
+    //
+    //        DB::table('jobs')->insert([
+    //            'queue' => $this->queue,
+    //            'payload' => $this->payload,
+    //            'attempts' => 0,
+    //            'available_at' => $unix_now,
+    //            'created_at' => $unix_now,
+    //        ]);
+    //    }
 
     public function getStartedAtExact(): ?Carbon
     {
