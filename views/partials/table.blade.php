@@ -140,6 +140,24 @@
 
                 @endif
 
+                @if(config('queue-monitor.ui.allow_retry'))
+
+                    <td class="pt-4 pb-4 pr-4 pl-0 text-gray-800 text-sm leading-5 border-b border-gray-200">
+                        @if($job->hasFailed())
+                            <form action="{{ route('queue-monitor::retry', [$job]) }}" method="get">
+
+                                @csrf
+
+                                <button class="px-3 py-1 bg-green-200 hover:bg-green-300 text-green-800 text-xs font-medium uppercase tracking-wider text-white rounded">
+                                    Retry
+                                </button>
+
+                            </form>
+                        @endif
+
+                    </td>
+
+                @endif
             </tr>
 
         @empty

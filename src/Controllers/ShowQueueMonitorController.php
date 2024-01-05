@@ -26,12 +26,14 @@ class ShowQueueMonitorController
             'status' => ['nullable', 'numeric', Rule::in(MonitorStatus::toArray())],
             'queue' => ['nullable', 'string'],
             'name' => ['nullable', 'string'],
+            'jobName' => ['nullable', 'string'],
         ]);
 
         $filters = [
             'status' => isset($data['status']) ? (int) $data['status'] : null,
             'queue' => $data['queue'] ?? 'all',
             'name' => $data['name'] ?? null,
+            'jobName' => $data['jobName'] ?? 'all',
         ];
 
         $jobsQuery = QueueMonitor::getModel()->newQuery();
@@ -42,6 +44,10 @@ class ShowQueueMonitorController
 
         if ('all' !== $filters['queue']) {
             $jobsQuery->where('queue', $filters['queue']);
+        }
+
+        if (null !== $filters['jobName'] && 'all' !== $filters['jobName']) {
+            $jobsQuery->where('name', '=', "{$filters['jobName']}");
         }
 
         if (null !== $filters['name']) {
@@ -68,6 +74,12 @@ class ShowQueueMonitorController
             })
             ->toArray();
 
+        $jobNames = QueueMonitor::getModel()
+            ->newQuery()
+            ->select('name')
+            ->groupBy('name')
+            ->pluck('name');
+
         $metrics = null;
 
         if (config('queue-monitor.ui.show_metrics')) {
@@ -80,6 +92,7 @@ class ShowQueueMonitorController
             'queues' => $queues,
             'metrics' => $metrics,
             'statuses' => MonitorStatus::toNamedArray(),
+            'jobNames' => $jobNames,
         ]);
     }
 

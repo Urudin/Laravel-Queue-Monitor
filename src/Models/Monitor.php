@@ -5,10 +5,13 @@ namespace romanzipp\QueueMonitor\Models;
 use Carbon\CarbonInterval;
 use Exception;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use romanzipp\QueueMonitor\Enums\MonitorStatus;
 use romanzipp\QueueMonitor\Models\Contracts\MonitorContract;
 
@@ -23,6 +26,7 @@ use romanzipp\QueueMonitor\Models\Contracts\MonitorContract;
  * @property string|null $started_at_exact
  * @property \Illuminate\Support\Carbon|null $finished_at
  * @property string|null $finished_at_exact
+ * @property string|null $payload
  * @property int $status
  * @property int $attempt
  * @property int|null $progress
@@ -44,6 +48,8 @@ use romanzipp\QueueMonitor\Models\Contracts\MonitorContract;
  */
 class Monitor extends Model implements MonitorContract
 {
+    use HasFactory;
+
     protected $guarded = [];
 
     /**
@@ -123,6 +129,19 @@ class Monitor extends Model implements MonitorContract
      * Methods
      *--------------------------------------------------------------------------
      */
+
+    public function retry()
+    {
+        $unix_now = Carbon::now()->unix();
+
+        DB::table('jobs')->insert([
+            'queue' => $this->queue,
+            'payload' => $this->payload,
+            'attempts' => 0,
+            'available_at' => $unix_now,
+            'created_at' => $unix_now,
+        ]);
+    }
 
     public function getStartedAtExact(): ?Carbon
     {
@@ -303,5 +322,9 @@ class Monitor extends Model implements MonitorContract
         return ! $this->retried
             && MonitorStatus::FAILED === $this->status
             && null !== $this->job_uuid;
+
+    public function job(): BelongsTo
+    {
+        return $this->belongsTo(Job::class);
     }
 }

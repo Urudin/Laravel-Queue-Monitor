@@ -5,17 +5,30 @@
         <div class="flex items-center my-2 -mx-2">
 
             <div class="px-2 w-1/4">
-                <label for="filter_name"
-                       class="block mb-1 text-xs font-light text-gray-500">
+                <label for="filter_show" class="block mb-1 text-xs font-light text-gray-500">
                     @lang('Job name')
                 </label>
-                <input type="text"
-                       id="filter_name"
-                       name="name"
-                       value="{{ $filters['name'] ?? null }}"
-                       placeholder="ExampleJob"
-                       class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded text-sm">
+                <select name="jobName" id="filter_show" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded text-sm appearance-none">
+                    <option value="all">All</option>
+                    @foreach($jobNames as $jobName)
+                        <option @if($filters['jobName'] === $jobName) selected @endif value="{{ $jobName }}">
+                            {{ $jobName }}
+                        </option>
+                    @endforeach
+                </select>
             </div>
+{{--            <div class="px-2 w-1/4">--}}
+{{--                <label for="filter_name"--}}
+{{--                       class="block mb-1 text-xs font-light text-gray-500">--}}
+{{--                    @lang('Job name')--}}
+{{--                </label>--}}
+{{--                <input type="text"--}}
+{{--                       id="filter_name"--}}
+{{--                       name="name"--}}
+{{--                       value="{{ $filters['name'] ?? null }}"--}}
+{{--                       placeholder="ExampleJob"--}}
+{{--                       class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded text-sm">--}}
+{{--            </div>--}}
 
             <div class="px-2 w-1/4">
                 <label for="filter_status"

@@ -151,6 +151,11 @@ class QueueMonitor
 
         $model = self::getModel();
 
+        $payload = $job->getRawBody();
+
+        while (is_array($payload)) {
+            $payload = json_encode($payload);
+        }
         /** @var MonitorContract $monitor */
         $monitor = $model::query()->updateOrCreate([
             'job_id' => $jobId = self::getJobId($job),
@@ -163,6 +168,7 @@ class QueueMonitor
             'started_at_exact' => $now->format(self::TIMESTAMP_EXACT_FORMAT),
             'attempt' => $job->attempts(),
             'status' => MonitorStatus::RUNNING,
+            'payload' => is_string($payload) ? $payload : null,
         ]);
 
         // Mark jobs with same job id (different execution) as stale
