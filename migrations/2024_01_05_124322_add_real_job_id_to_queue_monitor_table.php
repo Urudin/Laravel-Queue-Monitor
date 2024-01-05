@@ -26,8 +26,8 @@ class AddQueuedAtColumnToQueueMonitorTable extends Migration
     public function down()
     {
         Schema::table(config('queue-monitor.table'), function (Blueprint $table) {
-//            $table->dropForeign('queue_monitor_real_job_id_foreign');
-//            $table->dropColumn('queued_at');
+            //            $table->dropForeign('queue_monitor_real_job_id_foreign');
+            //            $table->dropColumn('queued_at');
         });
     }
 }
