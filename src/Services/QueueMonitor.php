@@ -19,6 +19,8 @@ class QueueMonitor
 
     public static string $model;
 
+    const TYPE_SYNC = 'sync';
+
     /**
      * Get the model used to store the monitoring data.
      *
@@ -156,13 +158,14 @@ class QueueMonitor
         while (is_array($payload)) {
             $payload = json_encode($payload);
         }
+        $realJobId = $job->getConnectionName() === self::TYPE_SYNC ? null : self::getJobId($job);
         /** @var MonitorContract $monitor */
         $monitor = $model::query()->updateOrCreate([
             'job_id' => $jobId = self::getJobId($job),
             'queue' => $job->getQueue() ?: 'default',
             'status' => MonitorStatus::QUEUED,
         ], [
-            'real_job_id' => $job->id,
+            'real_job_id' => $realJobId,
             'job_uuid' => $job->uuid(),
             'name' => $job->resolveName(),
             'started_at' => $now,
